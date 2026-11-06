@@ -1,0 +1,23 @@
+{
+  "name": "@ssf/remote",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Thin-client tooling for remote mode: HTTPS client plus server-side license checks.",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "build": "echo \"build: source-only package, nothing to emit\"",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "bun test",
+    "validate": "echo \"validate: ok\""
+  },
+  "dependencies": {
+    "@ssf/license": "workspace:*"
+  },
+  "devDependencies": {
+    "@ssf/build": "workspace:*",
+    "@ssf/crypto": "workspace:*",
+    "bun-types": "^1.4.4"
+  }
+}

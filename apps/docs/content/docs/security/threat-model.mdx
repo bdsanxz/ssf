@@ -1,0 +1,39 @@
+---
+title: Threat model
+description: Specified threats, what SSF handles, and what it does not.
+---
+
+# Threat model
+
+| Threat | Handled? | Note |
+| --- | --- | --- |
+| Copying a package for unlicensed use | Yes | Protected content is ciphertext without a key |
+| Third-party package modification | Yes | Artifact signature |
+| Use after license expiry | Cooperative | Runtime refuses; a holder who modifies the runtime can bypass |
+| License revocation | Online mode only | Offline mode cannot revoke |
+| Mass or automated cracking of the runtime (public framework structure) | Limited | Per-publisher, per-version diversification; scattered checks; plugins |
+| Script source read through agent conversation or context | Yes | Scripts are execute-only; no `read` for scripts |
+| Agent leaking protected `.md` content to the user via conversation | Limited | Confidentiality notice; soft control |
+| Determined license holder extracting scripts | No | Only obfuscation stands in the way; they hold the key and the machine |
+| Determined license holder extracting protected `.md` | No | They can run the runtime themselves |
+| Targeted attack against one skill | No | Only made harder, not prevented |
+| `.md` content visible in agent transcripts or logs | No | Decrypted content enters agent context |
+| Key leaked to another party | Limited | Keys rotate per version; blast radius is bounded |
+| Publisher root secret leaked | No | All derived keys exposed; store like a private key |
+| Test or example tokens/keys reaching production | Yes | Dev and example keypairs and root secrets rejected by production runtimes |
+| Malicious or defective plugin | Limited | Plugins only tighten, are bundled and signed, fail closed |
+
+Design consequences: encryption protects files **at rest**, not in use.
+Scripts never enter agent context but still run on the holder's machine.
+The 500-line cap and confidentiality notice manage context and behavior,
+**not** exfiltration. `SKILL.md` is always plaintext. High-value secrets
+belong in remote mode (tier 3, a later release), never in companion files or local scripts.
+
+## How to use this table
+
+Treat every row as a promise boundary: a feature, guide, or marketing claim
+is only acceptable if it stays inside the "Handled?" column above. In
+particular, no SSF documentation may present the framework as safe from the
+license holder — it is license enforcement plus deterrent, not absolute
+secrecy. The plain-language version of these limits lives in
+[Honest limitations](/docs/security/honest-limitations).

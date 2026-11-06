@@ -1,0 +1,98 @@
+---
+title: skill.manifest
+description: Skill manifest schema, validation rules, and resolution order.
+---
+
+# `skill.manifest` reference
+
+## Format
+
+YAML, parsed with a YAML parser into the `SkillManifest` shape. The file is
+declarative — no code. Every skill directory carries one file named exactly
+`skill.manifest`; the workspace loader reads it per skill, reports errors
+prefixed with the skill directory, and never lets one broken skill hide
+another. Duplicate skill ids across the workspace are rejected.
+
+## Shared rules
+
+- **Names** (`skill.id`, script `id`): `^[a-z0-9]+(-[a-z0-9]+)*$`, 1–64
+  characters, no leading or trailing hyphen, no consecutive hyphens.
+- **Logical paths** (companion `path`, script `entry`, shared `path`):
+  `/`-separated, never absolute, never containing `\`, empty segments,
+  `.`, or `..`.
+- **Descriptions**: `skill.description` is required, non-empty, max 1024
+  characters. Companion `description`, when present, must be a non-empty
+  single line (shown by `list`).
+
+## `skill:`
+
+| Field | Rule |
+| --- | --- |
+| `id` | Required, name rules above |
+| `version` | Required, non-empty string |
+| `description` | Required, 1–1024 chars; also becomes the Agent Skills frontmatter description |
+| `license` | Optional string (becomes frontmatter `license`) |
+| `metadata` | Optional string-to-string map (becomes frontmatter `metadata`) |
+
+## `license:` and `limits:`
+
+- `license.mode`: `offline` or `online` when present; overrides the
+  workspace default.
+- `limits.default_max_lines` / `default_max_chars`: per-`read` caps (not
+  file length caps). `default_max_lines` must be positive.
+
+## `shared:`
+
+Each entry declares one path with `path:`. Rules: the path must be
+a valid logical path, must live under `shared/` (never another skill), and
+must not be declared twice. Shared code is bundled into self-contained
+packages, and the final build scan excludes undeclared files.
+
+## `companion_files:`
+
+| Field | Rule |
+| --- | --- |
+| `path` | Required, logical-path rules |
+| `protection` | `none` (default), `obfuscated`, or `encrypted`. `remote` and unknown values are rejected with `TierError` |
+| `description` | Optional but expected: non-empty single line, shown by `list` |
+| `max_lines` | Optional positive number; effective value is clamped to max 500 |
+| `max_chars` | Optional positive number |
+| `confidentiality_notice` | Optional boolean; explicit value always wins, otherwise `true` for protected files and `false` for public ones |
+
+Resolution order for one read: entry value → manifest `limits:`
+section → workspace `limits`. The 500-line clamp applies last, after the
+precedence chain. Protected tiers require UTF-8 text content; binary
+content must stay tier 0 (protected binary assets are a later release).
+Missing manifest files fail the build.
+
+## `scripts:`
+
+| Field | Rule |
+| --- | --- |
+| `id` | Required, name rules above; the only handle agents ever see |
+| `entry` | Required, non-empty workspace-relative logical path to the bundled source |
+| `description` | **Required** — agents cannot read the source to learn what it does |
+| `usage` | **Required** — the complete call pattern |
+| `max_output_chars` | Optional positive number, else the workspace default |
+| `timeout_seconds` | Optional positive number, else the workspace default |
+
+Scripts are looked up by id — unregistered ids are not runnable — and caps
+resolve as entry value → workspace default. Raw entry paths leaked into
+free text such as the `SKILL.md` body fail the build: scripts are
+referenced by id only.
+
+## `exclude:`
+
+Glob patterns such as `**/*.test.ts` or `**/.DS_Store`. Syntax:
+`**` crosses directories (`**/` also matches zero directories), `*` stays
+inside one path segment, `?` matches one character except `/`, and a
+pattern without a slash matches the file name at any depth. Backslashes are
+normalized to `/` before matching.
+
+## Worked example
+
+A manifest exercises every
+section: public and encrypted companions, per-file `max_lines`/`max_chars`
+overrides, an explicit `confidentiality_notice`, one script with full
+`description`/`usage` plus caps, and `exclude` patterns. It parses and
+validates with the rules above.

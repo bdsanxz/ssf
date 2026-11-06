@@ -1,0 +1,32 @@
+skill:
+  id: report-writer
+  version: 1.0.0
+  description: Drafts structured reports from notes. Use when the user asks for a report, summary, or writeup.
+  license: Proprietary
+  metadata:
+    acme-team: docs
+
+license:
+  mode: offline
+
+limits:
+  default_max_lines: 500
+  default_max_chars: 40000
+
+shared:
+  - path: shared/lib/pdf-utils.ts
+
+companion_files:
+  - path: references/public-guide.md
+    protection: none
+    description: Basic usage guide for report writing
+
+scripts:
+  - id: summarize-notes
+    entry: src/summarize.ts
+    description: Summarize raw notes into a structured draft
+    usage: <notes.txt> [--format md|json]
+
+exclude:
+  - "**/*.test.ts"
+  - "**/.DS_Store"

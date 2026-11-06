@@ -1,0 +1,23 @@
+{
+  "name": "@ssf/skills-compat",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Agent Skills distribution compatibility: built package validation.",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "build": "echo \"build: source-only package, nothing to emit\"",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "bun test",
+    "validate": "echo \"validate: ok\""
+  },
+  "dependencies": {
+    "@ssf/manifest": "workspace:*",
+    "yaml": "^2.8.0"
+  },
+  "devDependencies": {
+    "@ssf/manifest": "workspace:*",
+    "bun-types": "^1.4.4"
+  }
+}

@@ -1,0 +1,86 @@
+---
+title: Architecture
+description: Specified high-level SSF architecture and the no-database principle.
+---
+
+# Architecture
+
+How SSF fits together, from the publisher workspace to the agent calling a
+skill.
+
+## End-to-end flow
+
+<Mermaid
+  chart={`
+flowchart TD
+    WS["Publisher workspace<br/>(skills + shared + ssf.config.ts)"]
+    PLUG["Plugins"]
+    BUILD["ssf CLI: Build System"]
+    DIST["dist/skills/&lt;id&gt;<br/>(Agent Skills compliant, diversified)"]
+    REPO["Distribution Repo<br/>(git, source stays private)"]
+    NPX["npx skills add / update"]
+    HARNESS["AI Agent Harness<br/>(installed skill)"]
+    SKILL["Agent reads SKILL.md"]
+    RT["Skill Runtime<br/>(core + bundled runtime plugins)"]
+    VERIFY["Local License Verification (core)"]
+    OFF["Protected Resource Access"]
+    LEASE["Lease (cached) / Online Verification"]
+    RES1["list / search / read<br/>Companion Files"]
+    RES2["run Scripts<br/>(execute-only)"]
+
+    WS --> BUILD
+    PLUG -.-> BUILD
+    BUILD --> DIST
+    DIST --> REPO
+    REPO --> NPX
+    NPX --> HARNESS
+    HARNESS --> SKILL
+    SKILL --> RT
+    RT --> VERIFY
+    VERIFY -->|"offline mode"| OFF
+    VERIFY -->|"online mode"| LEASE
+    LEASE --> OFF
+    OFF --> RES1
+    OFF --> RES2
+  `}
+/>
+
+## Components
+
+- **Workspace and CLI.** Multi-skill publisher workspace, one CLI, plugins.
+- **Build System.** Deterministic, diversified pipeline producing
+  `dist/skills/<id>/` — see
+  [Build and distribution](/docs/guides/build-distribution).
+- **Plugin System.** Policy hooks at build time and in the bundled runtime;
+  policies only, never crypto primitives.
+- **Distribution Package.** Self-contained per skill; installed via
+  `npx skills` with symlink or copy.
+- **Runtime.** License loading, local verification, artifact verification,
+  progressive resource access, in-memory script execution.
+- **Agent Consumption Contract.** The `list` / `search` / `read` / `run`
+  interface and error contract — see the
+  [Agent Contract](/docs/agent-contract).
+- **Agent Skills compatibility layer.** Generated frontmatter and `ssf`
+  block that keep every output installable and spec-valid.
+- **License Verification Service.** Required only for online mode (a
+  later release) — see [Licensing](/docs/guides/licensing).
+
+## No-database principle
+
+SSF runs without a database dependency. Trust and state travel in files:
+
+- **Signed tokens** carry the license (offline mode) — no lookup needed.
+- **JSON revocation list** carries revocations (online mode), read with a
+  short cache TTL.
+- **Append-only log files** carry history: `issued.jsonl` (every license
+  issued) and `releases.jsonl` (every release hash).
+
+There is no user table, no session store, no key server on the default
+offline path — and therefore no database to operate, back up, or breach.
+
+## Honest boundary
+
+Like everything else in SSF, this architecture is license enforcement plus
+deterrent, not absolute secrecy: verification happens on the license
+holder's machine, so a determined holder can bypass it. The exact limits
+are listed in the [Threat model](/docs/security/threat-model).

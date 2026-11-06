@@ -1,0 +1,8 @@
+skill:
+  id: demo
+  version: 1.0.0
+  description: Sample
+companion_files:
+  - path: references/guide.md
+    protection: none
+    description: Guide

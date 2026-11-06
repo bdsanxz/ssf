@@ -1,0 +1,112 @@
+name: compat
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - run: bun test packages/skills-compat packages/agent-contract packages/manifest
+      - run: node scripts/scan-secrets.mjs
+
+  discover:
+    runs-on: ubuntu-latest
+    needs: validate
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: The real skills CLI finds the static fixture skill
+        run: npx -y skills add ./packages/skills-compat/test/fixtures/sample-v1 --list -y
+
+  install-matrix:
+    needs: discover
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        agent: [claude-code, codex]
+        mode: [default, copy]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Install with symlink or copy flags
+        run: npx -y skills add ./packages/skills-compat/test/fixtures/sample-v1 -s demo -a ${{ matrix.agent }} -y ${{ matrix.mode == 'copy' && '--copy' || '' }}
+      - name: Installed skill lands in the agent directory
+        shell: bash
+        run: |
+          node -e "const fs=require('node:fs');const p='${{ matrix.agent }}'==='codex'?'.agents/skills/demo/SKILL.md':'.claude/skills/demo/SKILL.md';if(!fs.existsSync(p)){throw new Error('missing '+p)}console.log('installed: '+p)"
+
+  space-path:
+    needs: discover
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Install and serve from a path with spaces
+        shell: bash
+        run: |
+          mkdir -p "sp ace"
+          cd "sp ace"
+          npx -y skills add ../packages/skills-compat/test/fixtures/sample-v1 -s demo -a claude-code -y
+          test -f .claude/skills/demo/SKILL.md
+
+  update:
+    needs: install-matrix
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Reinstall from a newer release
+        shell: bash
+        run: |
+          npx -y skills add ./packages/skills-compat/test/fixtures/sample-v1 -s demo -a claude-code -y
+          npx -y skills remove -s demo -a claude-code -y
+          npx -y skills add ./packages/skills-compat/test/fixtures/sample-v2 -s demo -a claude-code -y
+          grep -q 'ssf-version: "1.0.1"' .claude/skills/demo/SKILL.md
+
+  example:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - name: Build the committed example with throwaway keys
+        shell: bash
+        run: |
+          cp -r examples/acme-skills /tmp/acme-skills
+          cd /tmp/acme-skills
+          printf '{"compilerOptions":{"baseUrl":".","paths":{"@ssf/*":["%s/packages/*/src/index.ts"]}}}' "$GITHUB_WORKSPACE/ssf" > tsconfig.json
+          bun "$GITHUB_WORKSPACE/ssf/packages/cli/src/bin.ts" keys generate --kid ci-throwaway
+          sed -i 's/licenseKid: "example"/licenseKid: "ci-throwaway"/; s/artifactKid: "example"/artifactKid: "ci-throwaway"/; s/rootKid: "example"/rootKid: "ci-throwaway"/' ssf.config.ts
+          bun $GITHUB_WORKSPACE/ssf/packages/cli/src/bin.ts validate
+          bun $GITHUB_WORKSPACE/ssf/packages/cli/src/bin.ts build --all --force
+          bun $GITHUB_WORKSPACE/ssf/packages/cli/src/bin.ts validate --dist
+
+  determinism:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - name: Two release builds of the same version hash identically
+        run: bun test packages/build/test/pipeline.test.ts -t "byte-identical"

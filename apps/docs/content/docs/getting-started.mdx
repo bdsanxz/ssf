@@ -1,0 +1,66 @@
+---
+title: Getting Started
+description: Prerequisites and the reading path for SSF.
+---
+
+import { Cards, Card } from 'fumadocs-ui/components/card';
+
+# Getting Started
+
+SSF is heading toward its first release. This page tells you what you
+need and what to read first. Install steps for the published CLI will
+appear here with the release.
+
+## What you need
+
+- **Node.js LTS** (currently supported) — the only runtime requirement for
+  running installed skills. No native dependencies.
+- **A license key** from the skill publisher — one key covers a
+  publisher's whole suite.
+
+Publisher source code always stays private with the publisher. What you
+install is the built skill package, distributed through a git repo and
+installed with:
+
+```bash
+npx skills add <owner>/<repo> --skill <id>
+```
+
+## Reading path
+
+1. [Overview](/docs) — what SSF guarantees and what it does not.
+2. [Protection tiers](/docs/guides/protection-tiers) — pick the right tier
+   before writing anything.
+3. [Threat model](/docs/security/threat-model) and
+   [Honest limitations](/docs/security/honest-limitations) — the exact
+   security boundaries.
+4. [Agent Contract](/docs/agent-contract) — how agents will consume skills.
+5. [What's coming](/docs/roadmap) — release scope and what lands later.
+
+<Cards>
+  <Card title="Protection tiers" href="/docs/guides/protection-tiers" />
+  <Card title="Agent Contract" href="/docs/agent-contract" />
+  <Card title="What's coming" href="/docs/roadmap" />
+</Cards>
+
+## How a skill reaches you (preview)
+
+The specified workflow, from publisher workspace to your agent:
+
+1. The publisher scaffolds a workspace and a skill.
+2. They declare companion files and scripts with protection tiers.
+3. They validate and build a deterministic release.
+4. They issue your license key.
+5. You install with `npx skills add` and the agent uses `list`, `search`,
+   `read`, and `run` through the skill runtime.
+
+Each step is documented in its guide. The command details live in the
+[CLI reference](/docs/reference/cli).
+
+## Next steps
+
+- If you publish skills: read [Protection tiers](/docs/guides/protection-tiers)
+  and [Workspace](/docs/guides/workspace) next.
+- If you build agents: skip to the [Agent Contract](/docs/agent-contract).
+- If you review risk: continue to
+  [Security](/docs/security/threat-model).

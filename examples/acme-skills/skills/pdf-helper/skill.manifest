@@ -1,0 +1,46 @@
+skill:
+  id: pdf-helper
+  version: 1.0.0
+  description: Extracts tables and text from PDF files. Use when the user mentions PDF, tables, or forms.
+  license: Proprietary
+  metadata:
+    acme-team: docs
+
+license:
+  mode: offline
+
+limits:
+  default_max_lines: 500
+  default_max_chars: 40000
+
+shared:
+  - path: shared/lib/pdf-utils.ts
+
+companion_files:
+  - path: references/public-guide.md
+    protection: none
+    description: Basic usage guide for PDF extraction
+
+  - path: references/architecture.md
+    protection: encrypted
+    description: Extraction workflow and limits
+    max_lines: 500
+
+  - path: private-prompts/system.md
+    protection: encrypted
+    description: Internal processing rules
+    max_lines: 300
+    max_chars: 20000
+    confidentiality_notice: true
+
+scripts:
+  - id: extract-table
+    entry: src/extract-table.ts
+    description: Extract tables from a PDF file
+    usage: <file.pdf> --pages <n|n-m> [--format csv|json]
+    max_output_chars: 20000
+    timeout_seconds: 120
+
+exclude:
+  - "**/*.test.ts"
+  - "**/.DS_Store"

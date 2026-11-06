@@ -1,0 +1,10 @@
+{
+  "title": "Guides",
+  "pages": [
+    "protection-tiers",
+    "workspace",
+    "build-distribution",
+    "licensing",
+    "plugins"
+  ]
+}

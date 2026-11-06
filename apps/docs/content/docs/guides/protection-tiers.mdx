@@ -1,0 +1,91 @@
+---
+title: Protection tiers
+description: Publisher guide to the four protection tiers, how to choose, and honest limits.
+---
+
+# Protection tiers
+
+This guide exists so your expectations match what the framework can actually
+do. Read it before assigning a tier to any file.
+
+## The four tiers
+
+| Tier | Mode | Protects against | Does not protect against | Fits |
+| --- | --- | --- | --- | --- |
+| 0. Public | `none` | Nothing | Anyone can read | General documentation, templates, assets |
+| 1. Obfuscated | `obfuscated` | Casual reading | Anyone willing to reverse the encoding | Content that only needs to be "not directly readable" |
+| 2. Encrypted | `encrypted`; scripts always | Parties **without** a license or key | A determined license holder; `.md` also appears in agent transcripts | Know-how, prompts, business rules, valuable scripts |
+| 3. Remote | Logic runs on the publisher server | Even the license holder | Only what is actually sent to the client | Algorithms, data, or prompts that must stay truly secret |
+
+Tiers 0–2 cover UTF-8 text files. Binary assets stay `none` (protected
+binary assets are a later release).
+
+## `.md` files vs. scripts at tier 2
+
+This is the distinction publishers misunderstand most. At tier 2:
+
+| Aspect | Protected `.md` | Script |
+| --- | --- | --- |
+| Enters agent context and transcripts | Yes — it must be readable to be useful | No — `run` only; the source is never readable |
+| Leakage through ordinary conversation | Reduced by the notice, still possible | Low |
+| Determined license holder | Can obtain the content | Gets obfuscated output only |
+| Real strength of the protection | Almost only against parties without a license | Obfuscation quality (deterrent) |
+
+In short: tier 2 keeps unlicensed parties out of both, but against a
+licensed holder a protected `.md` file is readable by design while a script
+is only as strong as its obfuscation.
+
+## How to choose (three questions)
+
+1. **Would it hurt if a legitimate customer read this?** If yes, use tier 3
+   (remote). Do not try to hide it in tier 2.
+2. **Would it hurt if an unlicensed party read this?** If yes, use tier 2.
+3. **Is "not readable at a glance" enough?** Tier 1. Otherwise, tier 0.
+
+## Split the skill
+
+Rarely does a whole skill deserve one tier. Split it: genuine secrets go to
+a server (tier 3), valuable content to tier 2, the rest stays public. A
+typical split keeps prompts and workflows at tier 2, ships documentation
+and templates at tier 0, and moves the one truly secret algorithm behind a
+publisher endpoint.
+
+## Message to customers
+
+Say this plainly in your own offering:
+
+- Do not market the framework as "safe from the license holder".
+- Tier 2 protects against copying and unlicensed use — not against a
+  customer who deliberately takes things apart.
+- Secrets that must stay hidden from device owners require tier 3.
+
+## Limitations you must plan for
+
+**Confidentiality notice (soft control).** The notice on protected
+`read`/`search` output lowers casual disclosure through conversation, but:
+a licensed user can run the runtime's `read` directly in a terminal; tool
+output is visible in harness transcripts and logs; some harnesses treat
+tool output as plain data and may ignore it (which is why the standing rule
+also lives in `SKILL.md`); and the instruction can be bypassed with
+jailbreaks or reframed requests.
+
+**Encryption (at rest only).** AES-256-GCM protects files while stored.
+Decryption happens on the holder's machine, so it cannot protect content
+while in use.
+
+**Obfuscation (deterrent only).** Obfuscation of scripts and the runtime is
+not a security boundary — it only raises the effort for a determined
+holder who already owns the key and the machine.
+
+**Plugins (policy only).** Plugins can add checks but cannot weaken core
+checks, replace cryptography, or hide the flow: plugin code ships in the
+package and is readable on the holder's machine.
+
+The full boundary table is the [Threat model](/docs/security/threat-model);
+the plain-language version is
+[Honest limitations](/docs/security/honest-limitations).
+
+Per-file `protection` declarations live in `skill.manifest`, the
+`.md`-vs-script distinction above is enforced by the build, and the
+validator warns on missing descriptions. Full authoring syntax is in the
+[manifest reference](/docs/reference/manifest).

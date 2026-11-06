@@ -1,0 +1,136 @@
+---
+title: Licensing
+description: Offline license model — sources, tokens, verification, issuance, and key protection.
+---
+
+# Licensing
+
+How license keys reach the runtime, what tokens carry, and how they are
+checked — all offline by default.
+
+## Key sources
+
+The publisher-declared env var wins (trimmed, non-empty); otherwise the
+config file at `<XDG_CONFIG_HOME|~/.config>/<configFile>` is read and
+trimmed. Missing or empty sources mean no license — no throw, no default.
+Rationale: many harnesses do not forward env vars to agent processes, so
+the file is the fallback. Keychain and secret-manager sources plug in
+later through plugins; the default order stays fixed.
+
+## Token format
+
+`ssf1.<kid>.<payload-base64url>.<signature-base64url`. Parsing validates
+the four-part shape, the `ssf1` version, the `kid` rule, strict base64url
+parts, and JSON-object payload — anything else throws `TokenFormatError`.
+Serialization uses fixed field order so signing bytes are stable:
+
+```json
+{
+  "license_id": "lic_…",
+  "publisher": "acme",
+  "mode": "offline",
+  "skills": ["pdf-helper"],
+  "issued_at": 1793923200,
+  "expires_at": 1825459200,
+  "content_keys": { "pdf-helper@1.0.0": "<base64url-32-bytes>" },
+  "ext": {}
+}
+```
+
+The signature covers the **original payload bytes**, never a JSON
+reserialization. Offline payloads carry per-`skill@version` content keys;
+online payloads carry none — the content key arrives in the lease. `ext`
+holds signed custom claims for issuer plugins.
+
+## Issuance (admin/CI only)
+
+Issuance mints multi-skill offline tokens: it derives each
+`skill@version` content key from the publisher root secret (base64url),
+assigns `lic_<16-hex>` unless an id is given, stamps `issued_at`, and signs
+with the license private key under the given `kid`. Requires a 32-byte root
+secret and at least one skill. Commands needing private keys or root
+secrets run only in admin/CI environments — customers receive the package
+plus the token string. The `ssf license issue/verify/list` commands ship
+with the CLI.
+
+## Local verification
+
+Verification checks, in order: token shape → production kid
+(`dev`/`example` rejected with `LICENSE_DEV_KEY`) → Ed25519 signature →
+publisher match → `expires_at` in the future → mode value → `skills` array
+and `content_keys` object presence. `checkScope` then requires the skill id
+in `skills` **and** a key for the exact `skill@version`; a renewed token
+carries newer version keys. `contentKeyFor` returns the decoded key bytes
+after the same scope check. Expiry doubles as the update entitlement, and
+token size grows about 45 characters per key.
+
+## Online verification
+
+For licenses that must be revocable, the runtime calls the publisher's
+verification service after local checks pass:
+
+```http
+POST /v1/licenses/verify
+Content-Type: application/json
+```
+
+with the full token plus `skill_id` and `skill_version`. The service
+verifies the signature and scope, consults the revocation list, and answers
+with a signed short-lived **lease** carrying that version's content key
+(default lifetime 6 hours, inside the 1–24 hour window). While the lease
+is valid the runtime makes no server call per invocation; an expired lease
+with no reachable server means access denied (fail-closed). The service
+holds the publisher root secret (or a per-version key table) and runs over
+HTTPS only, with no database — revocation state is a JSON file read with a
+short cache.
+
+## Honest tradeoff: the lease lives on disk
+
+The lease is cached in the user config directory so offline invocations
+keep working — and the lease **contains the content key**. Anyone who can
+read the device can extract it. A cached lease is a convenience copy of
+access the holder already has, not a boundary against the device owner:
+revocation takes effect at the next lease refresh at the latest, and it
+never retroactively protects content decrypted while a lease was valid.
+Plan key lifetimes accordingly: short leases bound the window.
+
+Privacy-wise the service only ever sees `license_id`, skill, version, and
+IP, and stores nothing per request. Revocation is a JSON file —
+`{ updated_at, revoked: [license_id, …] }` — and `ssf license revoke <id>`
+appends to it (default `revoked.json` in the workspace, override with
+`--revocations`). Entries are idempotent, and a missing file means nothing
+revoked yet. The service re-reads the file on a short cache, so a
+revocation takes effect no later than the next lease refresh.
+
+## Issuance log
+
+`issued.jsonl` is append-only: one JSON object per line with `license_id`,
+customer reference, skills, versions, issue/expiry timestamps, and `ext`.
+`listIssuance` reads all records (missing log reads as empty). Purpose:
+audit and license-to-customer mapping — never a service database.
+
+## Clock handling (best effort)
+
+The runtime stores the newest observed unix time as `last_seen` in the user
+config directory (`0600`). `detectClockRollback` reports a clock reading
+more than 60 seconds older than the mark; callers warn, never hard-fail —
+the file is user-writable. Detection cannot stop a holder who edits the
+file or bypasses the runtime.
+
+## Key protection
+
+Tokens are Bearer [REDACTED]: the payload is only signed, never encrypted, so
+anyone holding a token can extract its content keys. Secrets are redacted
+to `[REDACTED]` before errors and logs leave the runtime. Publisher private
+keys and root secrets live outside the repo (secret manager or `keys/`,
+gitignored) with CI access limited: keys are never printed to logs and
+credentials are never forwarded to untrusted processes.
+
+## Honest limits
+
+Offline licenses cannot be revoked before `expires_at` — use short
+lifetimes for high-risk content. Expiry enforcement is cooperative, the
+clock is local, and key delivery never protects plaintext from the device
+owner. Online verification, leases, and revocation take effect as
+described above; offline tokens are never revocable — remove the token
+from clients instead.

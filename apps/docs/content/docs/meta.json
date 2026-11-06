@@ -1,0 +1,13 @@
+{
+  "title": "Documentation",
+  "pages": [
+    "index",
+    "getting-started",
+    "architecture",
+    "guides",
+    "agent-contract",
+    "security",
+    "reference",
+    "roadmap"
+  ]
+}

@@ -1,0 +1,37 @@
+# Dependencies
+node_modules/
+bun.lockb
+
+# Build outputs
+dist/
+.tx/
+.turbo/
+
+# Publisher secrets - never commit
+keys/
+*.key
+*.pem
+*.p12
+*.pfx
+issued.jsonl
+releases.jsonl
+.env
+.env.*
+!.env.example
+
+# Distribution output (publisher workspaces only)
+examples/*/dist/
+examples/*/keys/
+
+# OS and editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
+*.swo
+
+# Logs
+*.log
+npm-debug.log*

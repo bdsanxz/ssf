@@ -1,0 +1,60 @@
+---
+title: Workspace
+description: Verified multi-skill workspace layout, loading, and shared-code rules.
+---
+
+# Workspace
+
+A publisher workspace holds many skills under one identity, managed with
+one CLI. Each skill carries its own id, version, and manifest, and releases
+independently.
+
+## Layout
+
+The reference workspace ships two skills (`pdf-helper`, `report-writer`),
+each with `skill.manifest`, `SKILL.md`, `src/`, `references/`, plus
+`templates/` where needed; shared code under `shared/lib/`; `keys/`
+(gitignored); an append-only `releases.jsonl`; and `dist/skills/` for build
+output.
+
+```
+acme-skills/
+├── ssf.config.ts
+├── skills/
+│   ├── pdf-helper/       # skill.manifest, SKILL.md, src/, references/, templates/
+│   └── report-writer/    # skill.manifest, SKILL.md, src/, references/
+├── shared/
+│   └── lib/              # declared per skill, never shared between skills
+├── keys/                 # gitignored; example kid only in the example
+├── releases.jsonl        # append-only release hash log
+└── dist/
+    └── skills/           # build output, one folder per skill id
+```
+
+## Loading behavior
+
+- The CLI finds the workspace by walking up from the working directory for
+  `ssf.config.ts` (then `.js`, `.mjs`).
+- Each listed skill's `skill.manifest` is read and validated, with errors
+  reported per skill directory — one broken skill never hides another.
+- Duplicate skill ids across the workspace are rejected: folder name,
+  frontmatter `name`, and token scope all key on the id.
+- Every listed skill builds independently with a per-skill outcome, so
+  releases stay independent per skill.
+
+## Configuration
+
+See the [`ssf.config.ts` reference](/docs/reference/ssf-config): identity,
+license sources, kids, limits, agent notice, build flags, skill list, and
+the untrusted-workspace safety rule.
+
+## Shared-code rules
+
+A skill must declare every `shared/` file it uses: paths must be valid
+logical paths under `shared/` (never another skill) and never duplicated.
+A script bundle that pulls in an undeclared `shared/` file fails the
+build. Protection is chosen per using skill, and shared code is bundled
+into self-contained packages.
+
+Publisher source skills always stay in private publisher workspaces, never
+in the framework repository.

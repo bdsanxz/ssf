@@ -1,0 +1,72 @@
+---
+title: Design principles
+description: The specified SSF design principles, including Kerckhoffs and honest security.
+---
+
+# Design principles
+
+<Callout type="warn" title="The standing rule">
+  SSF is **license enforcement plus deterrent, not absolute secrecy**.
+  Security rests on keys, never on the secrecy of the framework's code.
+</Callout>
+
+## Principles
+
+1. **Developer-controlled protection.** The publisher assigns a protection
+   tier to every file — see [Protection tiers](/docs/guides/protection-tiers).
+2. **Security by keys, not by secrecy of code (Kerckhoffs's principle).**
+   The framework is open source: anyone may study the runtime, the
+   container format, and the algorithms. Safety comes from keys (Ed25519
+   signatures, AES-256-GCM content keys, HKDF derivation), which remain
+   effective even though everything else is public.
+3. **No database dependency.** Trust is carried by signed tokens (Ed25519),
+   a JSON revocation list, and append-only issuance/release log files —
+   never by a live database. See [Architecture](/docs/architecture).
+4. **Runtime-based access.** Protected resources are reachable only through
+   the skill runtime, never by direct file reads.
+5. **Scripts are execute-only.** Agents can run scripts, never read them —
+   see the [Agent Contract](/docs/agent-contract).
+6. **Standards-compliant output.** Every generated skill is valid per the
+   Agent Skills specification and installable with `npx skills`.
+7. **Agent-friendly interface.** Compact, deterministic, self-describing
+   output with follow-up hints and actionable error messages.
+8. **Reproducible releases.** The same version always produces identical
+   artifacts, so updates are clean and tampering is detectable.
+9. **Cross-platform.** Node.js with no native dependencies (macOS, Windows,
+   Linux on x64 and ARM64).
+10. **Minimal dependencies.** Ed25519, AES-GCM, and HKDF come from
+    `node:crypto`; libraries are used only for CBOR, bundling, and
+    obfuscation. SSF never invents its own cryptography.
+11. **Self-contained packages.** Every skill in `dist/skills/` installs on
+    its own.
+12. **Extensible by policy, not by primitive.** Plugins may replace
+    policies (license sources, checks) but never the cryptographic
+    primitives — and a plugin can only tighten, never loosen, the core
+    checks.
+13. **Diversified output.** Each publisher release and each version produces
+    structurally different artifacts (seeded from the publisher root
+    secret), raising the cost of generic, mass-produced crack tools.
+14. **Honest security.** Limits — including the soft nature of agent
+    behavior controls — are documented, not hidden. See
+    [Honest limitations](/docs/security/honest-limitations) and the
+    [Threat model](/docs/security/threat-model).
+
+## Kerckhoffs in practice
+
+Because the framework is public, attackers know the exact shape of every
+default runtime build: function shapes, obfuscation patterns, container
+layout. The design answers with keys (per-publisher secrets, no shared
+default secrets), per-publisher per-version diversification, scattered
+license checks, custom plugins, per-version keys (plus watermarking in a
+later release), and remote mode (a later release) for what must never
+reach the device. These raise the cost of
+**mass** attacks; they do not stop a targeted attack on one skill by
+someone holding the machine.
+
+## What this means for writers
+
+Every SSF document — guides, reference, error text, generated `SKILL.md`
+blocks — must stay inside these principles. The single most common
+violation to watch for is marketing the framework as "safe from the license
+holder" (proposal §6.4): that claim is never true for tiers 0–2 and is
+rejected in review.

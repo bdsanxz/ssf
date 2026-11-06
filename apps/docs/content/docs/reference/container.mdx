@@ -1,0 +1,94 @@
+---
+title: Protected container
+description: Container layout, key schedule, and authenticated encryption.
+---
+
+# Protected container reference
+
+How protected files and scripts are packed, keyed, and sealed.
+
+## Layout (format v1)
+
+The container serializes `{ format: 1, rootKid, entries, integrity }` with
+CBOR (`cbor-x`). Objects are built in fixed key order and `undefined`
+optional fields are omitted, so encoding stays byte-identical across
+rebuilds of the same release. Integrity is SHA-256 over the encoded
+entries; `decodeContainer` throws `ContainerIntegrityError` on invalid CBOR,
+unsupported layout, or any modification. CBOR is serialization only — never
+a security mechanism.
+
+Each entry carries:
+
+| Field | Meaning |
+| --- | --- |
+| `kind` | `"file"` (companion, by logical path) or `"script"` (by id) |
+| `id` | Logical path or script id |
+| `protection` | `"obfuscated"` or `"encrypted"` (public files are never containerized) |
+| `description` / `usage` | Shown by `list`; `usage` only for scripts |
+| `lines` | Line count for files |
+| `notice` | Whether the confidentiality notice applies |
+| `maxLines` / `maxChars` | Per-read caps |
+| `nonce` / `ciphertext` / `tag` | The sealed block |
+
+## Key schedule
+
+- **Root secret:** 32 random bytes with a `kid` (`generateRootSecret`).
+  Not a keypair. Leaking it opens every version — store it like a private
+  key, never in the repo or the package.
+- **Content key** (32 bytes): `HKDF-SHA256(root_secret, "", "ssf/content-key"
+  \|\| skill_id \|\| version)`. Never stored in a package; the license
+  issuer derives it from the same root secret when minting tokens.
+- **File key** (32 bytes): `HKDF-SHA256(content_key, "", "ssf/file-key" \|\|
+  logical_id)`.
+- Both derivations reject wrong-length inputs instead of proceeding.
+
+## Nonce and AAD
+
+- **Nonce:** 12 bytes = first 12 bytes of `HKDF-SHA256(file_key, "",
+  "ssf/nonce" \|\| SHA-256(plaintext))`. Same content yields the same nonce
+  (deterministic builds); different content yields a different nonce, so a
+  nonce is never reused with different plaintext under one key.
+- **AAD:** `"ssf-aad-v1"` followed by length-prefixed `skill_id`, `version`,
+  `logical_id` fields, so no two distinct triples collide. Encrypted blocks
+  cannot be swapped between files or versions.
+
+## Authenticated encryption
+
+Exactly one algorithm: `aes-256-gcm` via `node:crypto`, 32-byte key,
+12-byte nonce, 16-byte tag. `seal` encrypts with explicit nonce and AAD;
+`open` authenticates and throws `DecryptionError` on any tampering. No
+custom cryptography exists anywhere. Fixing the algorithm against plugin
+The algorithm is fixed and cannot be replaced by plugins.
+
+## Signatures
+
+Ed25519 via `node:crypto`. `signArtifact` signs the container bytes and
+returns the `kid` alongside the raw signature; `verifyArtifact` returns
+`false` on any mismatch and `assertArtifactSignature` throws
+`ArtifactSignatureError`. Ed25519 is deterministic, so rebuilding the same
+release yields identical signature bytes. The signature proves integrity
+and publisher origin — not confidentiality; the trust anchor is the
+runtime. The runtime verifies the signature before decrypting.
+
+## Kids and key separation
+
+- Test kids `dev` (local keys) and `example` (shipped example workspace)
+  are rejected with a `LICENSE_DEV_KEY` error. Runtime-side enforcement
+  rejects them before any further checks.
+- `kid` rule: 1–64 chars of lowercase letters, digits, and hyphens;
+  rotation means minting a new `kid`.
+- Four independent purposes: `license-sign` and `artifact-sign`
+  (Ed25519 keypairs), `lease-sign` (Ed25519, online mode), `content-root`
+  (HKDF secret). Only public material ever ships in packages or runtimes.
+
+## Obfuscation
+
+`obfuscateJavaScript(source, { seed })` runs `javascript-obfuscator`
+deterministically per seed with `renameGlobals: true`, so entry function
+names do not survive into extracted sources. Tier-1 text uses the
+`ssf1:`-prefixed base64 encoding — explicitly **not** security, only hiding
+from casual reading, replaceable by a codec plugin (post-MVP). Obfuscation
+is a deterrent, never a boundary, and third-party scanner compatibility is
+not a target.
+
+

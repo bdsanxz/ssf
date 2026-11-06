@@ -1,0 +1,65 @@
+---
+title: CLI
+description: The ssf command surface.
+---
+
+# CLI reference
+
+One entry point for the whole workflow. License issuance is a `license`
+subcommand; anything needing private keys or root secrets runs only in
+admin or CI environments.
+
+```bash
+ssf new acme-skills --publisher acme
+ssf generate skill pdf-helper
+ssf validate
+ssf build --all
+ssf license issue --skills pdf-helper@1.0.0 --expires 30d
+```
+
+Unknown commands fail with an actionable message and exit code 1.
+Commands needing a workspace fail outside one the same way:
+
+```text
+ssf: no ssf.config.ts found in this directory or parents.
+```
+
+## Workspace discovery
+
+The CLI finds the workspace by walking up for `ssf.config.ts` (then `.js`,
+`.mjs`), executes it, and validates the result. Every command except `new`,
+`--help`, and `--version` requires a workspace. Flags accept both
+`--flag value` and `--flag=value` forms, and values are never mistaken for
+positionals.
+
+## Safety rule
+
+`ssf.config.ts` is executed code (like `vite.config.ts`). Both `--help`
+and `list` print this warning: never run `ssf` in an untrusted workspace.
+
+## Command surface
+
+| Command | Function | Ships |
+| --- | --- | --- |
+| `ssf new <workspace> --publisher <id>` | Create a workspace with config and skeleton | First release |
+| `ssf generate skill <name>` (alias `g`) | Scaffold `skills/<name>/`: manifest, `SKILL.md`, `src/`, references, example test | First release |
+| `ssf validate [skill]` | Check manifest, paths, shared declarations, limits, script rules, authoring links, plugin specs | First release |
+| `ssf validate [skill] --dist` | Validate built packages in `dist/skills/` instead of sources | First release |
+| `ssf build [skill]` / `--all` | Deterministic release to `dist/skills/<id>/` (`--seed` overrides diversification, `--force` overwrites a released version) | First release |
+| `ssf dev <skill>` | Dev build (random seed, dev keys) plus one runtime run with a short-lived local dev license | First release |
+| `ssf keys generate (--kid <kid> \| --dev) [--force]` | Create keypair plus root secret in `keys/` (private files `0600`, never overwritten without `--force`; dev/example kids print a no-publish warning) | First release |
+| `ssf license issue` | Mint a token for one or many skills (`--skills id@ver`, `--expires`, `--customer`, `--ext-json`, `--license-id`; key files via `--root-secret-file`, `--license-key-file`, `--license-kid`) | First release |
+| `ssf license verify <token> --public-key-file <pem>` | Check a token locally (exit 2 on invalid) | First release |
+| `ssf license list` | Read the issuance log | First release |
+| `ssf list` | List skill directories from the workspace config | First release |
+| `ssf generate reference` | Add a companion file and manifest entry | Later release |
+| `ssf generate script <skill> <id>` | Add a script and its `scripts:` entry | Later release |
+| `ssf generate plugin <name>` | Scaffold a plugin with contract test | Later release |
+| `ssf pack [skill]` | Layout check and archive (refuses dev builds) | Later release |
+| `ssf license revoke <id> [--revocations <file>]` | Append a license id to the revocation list (default `revoked.json`); effective no later than the next lease expiry — offline tokens carry their own keys and cannot be revoked | Later release |
+| `ssf plugins list` | List active plugins and capabilities | Later release |
+
+Tooling principles: plain-file generators with name substitution, error
+output that explains the concrete fix, and admin-only handling of private
+keys and root secrets. Online-mode, plugin-scaffolding, and packaging
+commands ship with their releases; the rest ships with the first release.

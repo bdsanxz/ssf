@@ -1,0 +1,84 @@
+---
+title: Overview
+description: What the Secure Skill Framework is, guarantees, and does not.
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+# Secure Skill Framework
+
+The Secure Skill Framework (SSF) is an open-source framework for building,
+protecting, distributing, and running AI agent skills with license-key
+authentication.
+
+Developers distribute skills together with companion files and scripts
+**without shipping the original source code**, and choose a protection tier
+per file. One workspace can hold many skills, managed through a single CLI
+and extensible through plugins. The build output is a skill that complies
+with the Agent Skills specification and can be installed with `npx skills`.
+
+The framework runs on any AI agent harness that can execute Node.js.
+
+<Callout type="warn" title="Honest scope">
+  SSF is **license enforcement plus deterrent, not absolute secrecy**.
+  Protected content is safe **at rest** (as ciphertext), not while in use:
+  decryption happens on the license holder's machine. See
+  [Honest limitations](/docs/security/honest-limitations).
+</Callout>
+
+<Callout title="Development status">
+  SSF is under active development toward its first release. This
+  documentation describes the specified behavior of that release; details
+  may change before it ships. See [What's coming](/docs/roadmap) for scope.
+</Callout>
+
+## Three foundations
+
+1. **Secure distribution.** Skills ship as packages with a protected
+   artifact. Without a valid license, protected content is ciphertext.
+2. **Authenticated runtime.** Protected resources are only accessible
+   through the skill runtime with a valid license.
+3. **Context-aware resource access.** Companion files are read progressively
+   (`list`, `search`, `read`) and scripts run **without exposing their
+   source**, with an output contract designed for AI agents.
+
+## Design principles
+
+- **Developer-controlled protection.** The publisher picks a tier per file.
+- **Security by keys, not by secrecy of code** (Kerckhoffs's principle).
+  All primitives are standard: Ed25519, AES-256-GCM, and HKDF from
+  `node:crypto`.
+- **No database dependency.** Signed tokens, an Ed25519 revocation list
+  file, and append-only issuance/release logs — never a live database.
+- **Runtime-based access.** Protected resources are reachable only through
+  the runtime; scripts are execute-only.
+- **Standards-compliant output.** Every generated skill is valid per the
+  Agent Skills specification.
+- **Agent-friendly interface.** Compact, deterministic, self-describing
+  output with follow-up hints and actionable error messages.
+- **Reproducible releases.** The same version always produces identical
+  artifacts.
+- **Cross-platform.** Node.js with no native dependencies.
+- **Extensible by policy, not by primitive.** Plugins can replace policies,
+  never the cryptographic primitives.
+
+## Release scope
+
+The first release covers the full offline workflow: workspace and
+manifests, deterministic diversified builds, the skill runtime with its
+agent contract, and offline license keys with one key per publisher.
+
+Coming later: online revocation, remote execution
+for truly secret logic, the public plugin API, per-customer builds, and
+protected binary assets. Details in [What's coming](/docs/roadmap).
+
+## Where to go next
+
+- New to SSF? Start with [Getting Started](/docs/getting-started).
+- Choosing protection? Read [Protection tiers](/docs/guides/protection-tiers).
+- Calling a skill from an agent? Read the
+  [Agent Contract](/docs/agent-contract).
+- Evaluating risk? Read [Threat model](/docs/security/threat-model) and
+  [Honest limitations](/docs/security/honest-limitations).
+- Looking up a command or file format? See the
+  [Reference](/docs/reference/cli).

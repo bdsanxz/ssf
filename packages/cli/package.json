@@ -1,0 +1,33 @@
+{
+  "name": "@ssf/cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Unified ssf command line interface and defineConfig helper.",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "build": "echo \"build: source-only package, nothing to emit\"",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "bun test",
+    "validate": "echo \"validate: ok\""
+  },
+  "bin": {
+    "ssf": "src/bin.ts"
+  },
+  "dependencies": {
+    "@ssf/agent-contract": "workspace:*",
+    "@ssf/build": "workspace:*",
+    "@ssf/crypto": "workspace:*",
+    "@ssf/license": "workspace:*",
+    "@ssf/manifest": "workspace:*",
+    "@ssf/plugin-api": "workspace:*",
+    "@ssf/skills-compat": "workspace:*",
+    "@ssf/templates": "workspace:*",
+    "yaml": "^2.8.0"
+  },
+  "devDependencies": {
+    "@ssf/runtime": "workspace:*",
+    "bun-types": "^1.4.4"
+  }
+}

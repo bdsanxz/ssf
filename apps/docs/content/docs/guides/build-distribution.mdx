@@ -1,0 +1,95 @@
+---
+title: Build and distribution
+description: Build pipeline stages, determinism, release log, and distribution layout.
+---
+
+# Build and distribution
+
+How a skill source becomes an installable, protected package.
+
+## Stage order (per skill)
+
+Every build runs: validate manifest and declarations → require publisher
+key material (a 32-byte root secret with a kid; dev and example kids are
+refused — no default keys exist) → typecheck and test stages (any failure
+fails the build) → per-skill protection → container packing → signing →
+`SKILL.md` rendering → public manifest → runtime bundling →
+`dist/skills/<id>/` → release record → leak scan.
+
+Every listed skill builds independently with per-skill outcomes, so one
+skill's failure never blocks the report for the others.
+
+## Protection behavior
+
+- **Scripts:** entry resolved and bundled, undeclared `shared/` inputs in
+  the bundle fail the build; code is minified, obfuscated with the release
+  seed, then encrypted under the per-script file key. The entry is always
+  `encrypted`, carries `description`/`usage`, and gets `notice: false`.
+- **Companions:** missing manifest files fail the build. `none` files are
+  copied to the package byte for byte; protected files must be UTF-8 text
+  and are encrypted under the per-file key (tier 1 as `ssf1:`-prefixed
+  base64 inside the sealed payload, tier 2 as raw ciphertext). Effective
+  limits and the notice flag resolve with the documented precedence.
+- **Keys:** content key per skill per version from the root secret; file
+  keys per logical id; content-derived nonces; AAD-bound blocks — see the
+  [container reference](/docs/reference/container).
+
+## Determinism mechanisms
+
+Same inputs produce the same bytes through: content-derived nonces,
+deterministic Ed25519 signatures, fixed CBOR key order with `undefined`
+omission, and SHA-256 integrity over the encoded entries. The release seed
+is `HKDF(root_secret, "ssf/seed" || skill_id || version)`; the obfuscator
+seed folds from it (overridable, e.g. `--seed`), while dev builds use a
+random seed that must never be released.
+
+## Package layout
+
+Each skill writes `dist/skills/<id>/` containing exactly: `SKILL.md`
+(generated frontmatter plus `ssf` block), the public-only `skill.manifest`
+(metadata plus public files — protected and script entries stay inside
+`runtime.bin`), public companions in place, and `scripts/runtime.js` plus
+`scripts/runtime.bin`. The writer refuses any path escaping the package.
+The folder name always equals the skill id, so every package installs
+standalone. `dist/` is pushed to a separate distribution repo while the
+source stays private.
+
+## Release log
+
+`releases.jsonl` is append-only: `{ skill, version, hash, kid }` per line.
+Rebuilding the same version with identical content is a quiet no-op;
+changed content for a released version throws unless forced. Missing logs
+read as empty; latest entry wins lookups.
+
+## Leak scan
+
+After writing the package, the final scan runs and any violation fails the
+build. Coverage: no protected plaintext or script source in the package, no
+script source maps, a clean public manifest, complete script
+`id`/`description`/`usage`, spec-valid frontmatter with matching folder
+name, no private keys/root secrets/content keys in the package, no
+undeclared `shared/` content, and no dev/`example` keys in production
+builds.
+
+## Distribution and compatibility
+
+`dist/skills/<id>/` is found by `npx skills add ./dist --list` and installs
+per skill with `--skill <id>` (symlink or `--copy`), with clean
+`check`/`update` behavior from deterministic releases. There is no
+skills.sh publish step: distribution is a git push, and installation is
+`npx skills add <owner>/<repo> --skill <id>`.
+
+Compatibility is tested, not assumed. The test suite drives the real
+`npx skills` CLI: listing built skills, install, update across versions,
+and remove — over symlink installs, `--copy` installs, and paths with
+spaces. Agent paths differ per harness (for example `.claude/skills/` vs
+`.agents/skills/`); the runtime resolves `runtime.bin` relative to its own
+file and keeps state out of the skill folder, so it works from any install
+location.
+
+`ssf validate --dist` checks every built package before it ships:
+spec-compliant frontmatter, folder name equal to `name`, public-only
+manifest, required runtime files present, and resolvable relative links.
+Links to protected paths or script entries fail instead of warning, because
+the built package cannot tell a broken link from a link to an unshipped
+protected file.

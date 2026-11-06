@@ -1,0 +1,30 @@
+{
+  "name": "secure-skill-framework",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Secure Skill Framework - open source framework for building, protecting, and running AI agent skills",
+  "packageManager": "bun@1.4.3",
+  "workspaces": [
+    "packages/*",
+    "apps/*",
+    "services/*",
+    "examples/*"
+  ],
+  "scripts": {
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "validate": "turbo run validate",
+    "scan-secrets": "node scripts/scan-secrets.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "turbo": "^2.11.10",
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "bun": ">=1.0.0",
+    "node": ">=20.0.0"
+  }
+}

@@ -1,0 +1,66 @@
+---
+title: Plugins
+description: Publisher policy plugins — what they can do, what they cannot, and what ships when.
+---
+
+# Plugins
+
+Because the framework is open source, every publisher faces the same
+default runtime shape. Plugins let each publisher add their own checks and
+key sources, so a generic attack against the framework does not transfer
+automatically — and so SSF fits existing license servers, billing, SSO, or
+OS keychains.
+
+The standing rule: **plugins replace policies, never cryptographic
+primitives.** A plugin can add checks but can never weaken a core check,
+change the encryption, or skip verification. A plugin that throws, times
+out, or returns an invalid value fails closed: access is denied.
+
+## What plugins can touch
+
+- **License sources.** Where the key comes from: env var and config file
+  are built in; keychains or secret managers plug in here.
+- **Key providers.** Where content keys come from besides tokens and
+  leases (for example a KMS); the GCM authentication tag still validates
+  any key a plugin supplies.
+- **License checks.** Extra verification every access must pass — all
+  checks must allow, one denial wins.
+- **Text transforms.** Processing companion content at build time or
+  watermarking reads at runtime.
+- **Issuance extras.** Custom signed claims added to tokens at issue time.
+
+## Built-in plugins
+
+The defaults are implemented with the same interface publishers use:
+
+| Plugin | Role |
+| --- | --- |
+| `license-source-env` / `license-source-file` | The two default license sources, first-wins |
+| `key-provider-token` / `key-provider-lease` | Content keys from tokens (offline) and leases (online) |
+| `codec-default` | The tier-1 text encoding for obfuscated files |
+
+## Safety rules
+
+- Only tighten: core checks plus every plugin check must pass.
+- Runtime plugins are bundled into `runtime.js` at build time and signed
+  with the artifact — nothing loads dynamically from user-writable paths.
+- `capabilities` (`network`, `fs`, `env`) are declared for review, and the
+  build prints every active plugin with its capabilities.
+- Plugin versions are locked; third-party plugins need review before use —
+  a plugin runs with full user privileges.
+
+## Configuration
+
+`plugins:` in `ssf.config.ts` lists module specifiers. Each module exports
+a plugin object (or a zero-arg factory) as `default` or `plugin`; option
+factories are called in a local module that re-exports the result.
+`ssf validate` loads every configured plugin and reports invalid ones.
+Deterministic builds require deterministic plugins: the same inputs must
+produce the same outputs.
+
+## Later release
+
+The public plugin API — `ssf generate plugin` scaffolding, `ssf plugins
+list`, contract-test utilities, and API documentation — ships after the
+initial release. Until then the interface is internal: the built-ins above
+plus the hooks the runtime already runs.

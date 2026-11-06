@@ -1,0 +1,49 @@
+---
+title: Honest limitations
+description: What SSF cannot do, stated plainly.
+---
+
+# Honest limitations
+
+## The core limitation
+
+A user who controls their machine can modify the runtime, remove license
+checks, swap public keys, inspect memory, extract resources or scripts after
+decryption, run `runtime.js` outside the agent interface, or change the
+clock. Therefore:
+
+- Scripts extracted by a determined holder are protected only by
+  obfuscation — a deterrent, not a boundary.
+- Plugins and custom checks do not hide the flow: their code ships in the
+  package and is readable on the holder's machine.
+- Execute-only scripts and `run` restrictions bind the **agent interface**,
+  not the device owner.
+
+## Agent-specific leakage
+
+- Decrypted `.md` content enters agent context, transcripts, and harness
+  logs. Pagination caps (500 lines) manage context windows; they do not
+  prevent extraction.
+- Users can ask the agent to dump whole files page by page; the
+  confidentiality notice only lowers the likelihood.
+- Some harnesses treat tool output as plain data and may ignore the notice,
+  which is why the standing rule also lives in `SKILL.md`.
+
+## Open-source and public-distribution consequences
+
+- The framework structure is public; diversification and plugins raise the
+  cost of **mass** attacks, not of targeted analysis of one build.
+- Distribution-repo packages can be downloaded by anyone with repo access;
+  without a token they are ciphertext — but old-version ciphertext stays
+  decryptable by tokens that list that version.
+- Obfuscation is not a security boundary. Online verification does not stop
+  bypass on a modified runtime.
+
+## What to do instead
+
+- Never promise protection "from the license holder"; that claim is
+  rejected in review.
+- Put genuinely secret logic or data behind **remote mode** (tier 3, a later release), where
+  execution stays on the publisher's server.
+- Use short offline license lifetimes for high-risk content, since offline
+  licenses cannot be revoked.

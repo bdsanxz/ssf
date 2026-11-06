@@ -1,0 +1,22 @@
+{
+  "name": "@ssf/license-verification",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Online license verification service: verifies tokens, checks revocations, mints leases.",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "build": "echo \"build: source-only package, nothing to emit\"",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "bun test",
+    "validate": "echo \"validate: ok\""
+  },
+  "dependencies": {
+    "@ssf/crypto": "0.1.0",
+    "@ssf/license": "0.1.0"
+  },
+  "devDependencies": {
+    "bun-types": "^1.4.4"
+  }
+}

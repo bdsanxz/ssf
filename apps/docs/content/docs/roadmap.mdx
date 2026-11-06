@@ -1,0 +1,45 @@
+---
+title: What's coming
+description: SSF release scope — what the first release covers and what lands later.
+---
+
+# What's coming
+
+SSF is heading toward its first release. This page states the scope in
+plain terms: what the initial release covers, and what is deliberately
+left for later.
+
+## Initial release
+
+- **Workspace and manifests.** Multi-skill workspaces, `ssf.config.ts`,
+  and `skill.manifest` with per-file protection tiers, shared-code
+  declarations, and script entries.
+- **Deterministic builds.** Reproducible, diversified releases to
+  `dist/skills/<id>/`, installable with `npx skills`, with a leak scan on
+  every build.
+- **Skill runtime.** License-key authentication with the `list` / `search` /
+  `read` / `run` agent interface, execute-only scripts, and the error
+  contract agents rely on.
+- **Offline licensing.** One license key per publisher covering multiple
+  skills, verified locally with no server and no network.
+- **Documentation.** This site: tier guidance, the agent contract, honest
+  security boundaries, and the full command and file reference.
+
+## Later releases
+
+- **Online revocation.** Verification service, short-lived leases, and
+  the revocation list are implemented; they ship together after the
+  initial release, for licenses that must be revocable.
+- **Remote execution.** Server-side execution for logic that must stay
+  hidden even from the device owner (tier 3).
+- **Public plugin API.** Custom license sources, checks, and processing
+  hooks for publishers with their own infrastructure.
+- **More distribution options.** Per-customer builds, watermarking, and
+  protected binary assets.
+
+## What never changes
+
+The honest boundaries documented in [Threat model](/docs/security/threat-model)
+and [Honest limitations](/docs/security/honest-limitations) apply to every
+release: license enforcement plus deterrent, never absolute secrecy, and
+never safety from the license holder below tier 3.

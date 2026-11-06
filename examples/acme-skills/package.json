@@ -1,0 +1,15 @@
+{
+  "name": "acme-skills-example",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Example multi-skill publisher workspace (uses kid example only).",
+  "scripts": {
+    "typecheck": "echo \"typecheck: example workspace\"",
+    "validate": "echo \"validate: use ssf validate in a later sprint\""
+  },
+  "dependencies": {
+    "@ssf/cli": "workspace:*",
+    "@ssf/manifest": "workspace:*"
+  }
+}
